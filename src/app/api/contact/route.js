@@ -1,21 +1,22 @@
-import { PrismaClient } from '@prisma/client';
+import { NextResponse } from 'next/server';
+import { Resend } from 'resend';
 
-const prisma = new PrismaClient();
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req) {
   try {
     const body = await req.json();
-    const contact = await prisma.contact.create({
-      data: {
-        name: body.name,
-        email: body.email,
-        phone: body.phone,
-        subject: body.subject,
-        message: body.message,
-      },
+    const { name, email, message } = body;
+
+    const data = await resend.emails.send({
+      from: 'onboarding@resend.dev',
+      to: 'rabiakhalid476@gmail.com', // Yahan apna email likhein
+      subject: `New Message from ${name}`,
+      text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`,
     });
-    return Response.json({ success: true, contact });
+
+    return NextResponse.json({ success: true, data });
   } catch (error) {
-    return Response.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to send' }, { status: 500 });
   }
 }
