@@ -1,4 +1,4 @@
- {
+{
   "name": "my-website",
   "version": "0.1.0",
   "private": true,
@@ -10,6 +10,10 @@
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",
+    "@supabase/auth-helpers-nextjs": "^0.15.0",
+    "@supabase/ssr": "^0.12.3",
+    "@supabase/supabase-js": "^2.110.7",
+    "bcryptjs": "^3.0.3",
     "next": "16.2.10",
     "react": "19.2.4",
     "react-dom": "19.2.4",
