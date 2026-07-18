@@ -1,33 +1,66 @@
-'use client'
-import { useState } from 'react';
+ 'use client';
+import { useState, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter();
   
-  // Supabase client initialize karein
+  const { executeRecaptcha } = useGoogleReCaptcha();
+  
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
 
-  const handleLogin = async (e) => {
+  const handleLogin = useCallback(async (e) => {
     e.preventDefault();
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    
+    if (!executeRecaptcha) {
+      alert("reCAPTCHA not ready");
+      return;
+    }
+
+    // 1. Token generate karein
+    const token = await executeRecaptcha("login");
+
+    // 2. Hamare apne API route se verify karein
+    const verifyRes = await fetch('/api/verify-recaptcha', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ token }),
     });
 
-    if (error) {
-      alert(error.message);
-    } else {
-      router.push('/dashboard');
-      router.refresh();
+    // --- Yahan updated logic hai ---
+    if (verifyRes.status === 429) {
+      alert("Too many login attempts. Please wait a minute and try again.");
+      return;
     }
-  };
+
+    const verifyData = await verifyRes.json();
+
+    // 3. Agar verification success hai, tabhi Login proceed karein
+    if (verifyData.success) {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        alert(error.message);
+      } else {
+        router.push('/dashboard');
+        router.refresh();
+      }
+    } else {
+      alert("reCAPTCHA verification failed! Please try again.");
+    }
+  }, [executeRecaptcha, email, password, router, supabase]);
 
   return (
     <div className="flex justify-center items-center h-screen">
